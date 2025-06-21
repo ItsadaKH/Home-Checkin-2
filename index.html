@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>เช็คชื่อด้วย GPS</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    #form-area { display: none; margin-top: 1rem; }
+    #deny-msg { color: red; display: none; }
+  </style>
+</head>
+<body>
+  <h2>ระบบเช็คชื่อด้วยตำแหน่ง</h2>
+  <p id="status-msg">กำลังตรวจสอบตำแหน่งของคุณ...</p>
+  <div id="deny-msg">คุณไม่ได้อยู่ในพื้นที่ที่อนุญาตให้เช็คชื่อ</div>
+
+  <div id="form-area">
+    <form id="checkin-form">
+      <label>ชื่อ-นามสกุล: <input type="text" name="name" required></label><br><br>
+      <label>รหัส: <input type="text" name="id" required></label><br><br>
+      <button type="submit">ส่งข้อมูล</button>
+    </form>
+    <div id="submit-msg"></div>
+  </div>
+
+  <script>
+    const allowedLat = 12.779656;  // พิกัดที่อนุญาต
+    const allowedLng = 101.728470;
+    const radiusMeters = 100;
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwkXRTWzJcZz70nfLB03_6kdIceamD9BD9D6g4d3vajOL0699wHGgbixVizpYnwhwl1/exec";
+
+    let userLat, userLng;
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const toRad = (x) => x * Math.PI / 180;
+      const R = 6371e3;
+      const φ1 = toRad(lat1), φ2 = toRad(lat2);
+      const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    navigator.geolocation.getCurrentPosition((position) => {
+      userLat = position.coords.latitude;
+      userLng = position.coords.longitude;
+      const distance = getDistance(userLat, userLng, allowedLat, allowedLng);
+
+      document.getElementById('status-msg').style.display = 'none';
+
+      if (distance <= radiusMeters) {
+        document.getElementById("form-area").style.display = "block";
+      } else {
+        document.getElementById("deny-msg").style.display = "block";
+      }
+    }, () => {
+      document.getElementById("status-msg").style.display = "none";
+      const denyMsg = document.getElementById("deny-msg");
+      denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS";
+      denyMsg.style.display = "block";
+    });
+
+    document.getElementById("checkin-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      // สร้าง FormData ส่งแทน JSON
+      const formData = new FormData();
+      formData.append('name', form.name.value);
+      formData.append('id', form.id.value);
+      formData.append('lat', userLat);
+      formData.append('lng', userLng);
+
+      try {
+        const res = await fetch(scriptURL, {
+          method: 'POST',
+          body: formData,
+          // ไม่ต้องตั้ง header Content-Type เพราะ browser จะตั้งให้เอง
+        });
+        if (res.ok) {
+          document.getElementById("submit-msg").innerText = "✅ เช็คชื่อสำเร็จ!";
+          form.reset();
+        } else {
+          throw new Error('Network response was not ok');
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("submit-msg").innerText = "❌ เกิดข้อผิดพลาดในการส่งข้อมูล";
+      }
+    });
+  </script>
+</body>
+</html>
