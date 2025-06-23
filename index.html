@@ -2,11 +2,68 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>เช็คชื่อเข้าสีด้วย ระบบ GPS ระบุตำแหน่ง</title>
   <style>
-    body { font-family: sans-serif; padding: 2rem; }
-    #form-area { display: none; margin-top: 1rem; }
-    #deny-msg { color: red; display: none; }
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      margin: 0;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 1rem;
+    }
+
+    input {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 0.75rem;
+      font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #form-area {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    #deny-msg {
+      color: red;
+      display: none;
+      text-align: center;
+    }
+
+    #submit-msg {
+      text-align: center;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -16,15 +73,21 @@
 
   <div id="form-area">
     <form id="checkin-form">
-      <label>ชื่อ-นามสกุล: <input type="text" name="name" required></label><br><br>
-      <label>รหัส: <input type="text" name="id" required></label><br><br>
+      <label>
+        ชื่อ-นามสกุล:
+        <input type="text" name="name" required>
+      </label>
+      <label>
+        รหัส:
+        <input type="text" name="id" required>
+      </label>
       <button type="submit">ส่งข้อมูล</button>
     </form>
     <div id="submit-msg"></div>
   </div>
 
   <script>
-    const allowedLat = 12.8005707;  // พิกัดที่อนุญาต
+    const allowedLat = 12.8005707;
     const allowedLng = 101.6550749;
     const radiusMeters = 50;
     const scriptURL = "https://script.google.com/macros/s/AKfycbwkXRTWzJcZz70nfLB03_6kdIceamD9BD9D6g4d3vajOL0699wHGgbixVizpYnwhwl1/exec";
@@ -56,7 +119,7 @@
     }, () => {
       document.getElementById("status-msg").style.display = "none";
       const denyMsg = document.getElementById("deny-msg");
-      denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS และกดอนุญาต หากใช้ Iphone ให้ไปตั้งใน setting ";
+      denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS และกดอนุญาต หากใช้ iPhone ให้ไปตั้งใน Settings > Safari > Location";
       denyMsg.style.display = "block";
     });
 
@@ -64,7 +127,6 @@
       e.preventDefault();
       const form = e.target;
 
-      // สร้าง FormData ส่งแทน JSON
       const formData = new FormData();
       formData.append('name', form.name.value);
       formData.append('id', form.id.value);
@@ -75,7 +137,6 @@
         const res = await fetch(scriptURL, {
           method: 'POST',
           body: formData,
-          // ไม่ต้องตั้ง header Content-Type เพราะ browser จะตั้งให้เอง
         });
         if (res.ok) {
           document.getElementById("submit-msg").innerText = "✅ เช็คชื่อสำเร็จ!";
