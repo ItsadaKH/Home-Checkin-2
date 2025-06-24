@@ -1,392 +1,198 @@
-
-
-
-
 <!DOCTYPE html>
-
 <html lang="th">
-
 <head>
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>เช็คชื่อเข้าสีด้วย ระบบ GPS ระบุตำแหน่ง</title>
-
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100dvh;
+      overflow-x: hidden;
+    }
 
     body {
-
       display: flex;
-
       flex-direction: column;
-
       justify-content: center;
-
       align-items: center;
-
       font-family: sans-serif;
-
-      padding: 2rem;
-
-      margin: 0;
-
-      min-height: 100vh;
-
-      position: relative;
-
+      padding: 1rem;
       background-color: white;
-
       color: black;
-
       transition: background 0.5s, color 0.5s;
-
       text-align: center;
-
     }
-
-
 
     body.background-active {
-
       background-image: url('https://wallpapersok.com/images/high/4k-phone-background-pink-star-in-galaxy-5e8hvc6dmwajd9p8.webp');
-
       background-size: cover;
-
       background-position: center;
-
       background-repeat: no-repeat;
-
       color: black;
-
     }
-
-
 
     #main-content {
-
       z-index: 1;
-
       width: 100%;
-
       max-width: 400px;
-
       padding: 1rem;
-
       background: rgba(255, 255, 255, 0.9);
-
       border-radius: 10px;
-
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-
     }
-
-
 
     #form-area {
-
       display: none;
-
       margin-top: 1rem;
-
     }
-
-
 
     #deny-msg {
-
       color: red;
-
       display: none;
-
     }
-
-
 
     input, button {
-
       padding: 0.5rem;
-
       border-radius: 5px;
-
       border: none;
-
       margin-top: 0.5rem;
-
       width: 90%;
-
       max-width: 300px;
-
     }
-
-
 
     button {
-
       background-color: #3498db;
-
       color: white;
-
       cursor: pointer;
-
     }
-
-
 
     button:hover {
-
       background-color: #2980b9;
-
     }
-
-
 
     .spinner {
-
       width: 40px;
-
       height: 40px;
-
-      border: 4px solid #ff000000; /* สีขอบพื้น */
-
-      border-top: 4px solid #000000; /* สีขอบบนที่หมุน */
-
+      border: 4px solid #ff000000;
+      border-top: 4px solid #000000;
       border-radius: 50%;
-
       animation: spin 1s linear infinite;
-
       margin: 1rem auto;
-
-}
-
-
-
-body.background-active .spinner {
-
-  border: 4px solid #ffffff60;
-
-  border-top: 4px solid #000000;
-
-}
-
     }
-
-
 
     body.background-active .spinner {
-
       border: 4px solid #ffffff60;
-
-      border-top: 4px solid #0000;
-
+      border-top: 4px solid #000000;
     }
-
-
 
     @keyframes spin {
-
       0% { transform: rotate(0deg); }
-
       100% { transform: rotate(360deg); }
-
     }
-
-
 
     #spinner, #submit-spinner {
-
       display: none;
-
     }
-
   </style>
-
 </head>
-
 <body>
-
   <div id="main-content">
-
     <h2>เช็คชื่อเข้าสีด้วย ระบบ GPS ระบุตำแหน่ง</h2>
-
     <p id="status-msg">กำลังตรวจสอบตำแหน่งของคุณ...</p>
-
     <div id="spinner" class="spinner"></div>
-
     <div id="deny-msg">คุณไม่ได้อยู่ในพื้นที่ที่อนุญาตให้เช็คชื่อ</div>
 
-
-
     <div id="form-area">
-
       <form id="checkin-form">
-
         <label>ชื่อ-นามสกุล:<br><input type="text" name="name" required></label><br>
-
         <label>รหัสนักเรียน:<br><input type="text" name="id" required></label><br>
-
         <button type="submit">ส่งข้อมูล</button>
-
         <div id="submit-spinner" class="spinner"></div>
-
       </form>
-
       <div id="submit-msg"></div>
-
     </div>
-
   </div>
 
-
-
   <script>
-
     const allowedLat = 12.8006031;
-
     const allowedLng = 101.6549753;
-
     const radiusMeters = 50;
-
     const scriptURL = "https://script.google.com/macros/s/AKfycbwkXRTWzJcZz70nfLB03_6kdIceamD9BD9D6g4d3vajOL0699wHGgbixVizpYnwhwl1/exec";
 
-
-
     let userLat, userLng;
-
     document.getElementById("spinner").style.display = "block";
 
-
-
     function getDistance(lat1, lon1, lat2, lon2) {
-
       const toRad = x => x * Math.PI / 180;
-
       const R = 6371e3;
-
       const φ1 = toRad(lat1), φ2 = toRad(lat2);
-
       const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
-
       const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
       return R * c;
-
     }
 
-
-
     navigator.geolocation.getCurrentPosition((position) => {
-
       document.getElementById("spinner").style.display = "none";
-
       userLat = position.coords.latitude;
-
       userLng = position.coords.longitude;
-
-
 
       document.body.classList.add("background-active");
 
-
-
       const distance = getDistance(userLat, userLng, allowedLat, allowedLng);
-
       document.getElementById('status-msg').style.display = 'none';
 
-
-
       if (distance <= radiusMeters) {
-
         document.getElementById("form-area").style.display = "block";
-
       } else {
-
         document.getElementById("deny-msg").style.display = "block";
-
       }
-
     }, () => {
-
       document.getElementById("spinner").style.display = "none";
-
       document.getElementById("status-msg").style.display = "none";
-
       const denyMsg = document.getElementById("deny-msg");
-
-      denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS และกดอนุญาต หากใช้ iPhone ให้ไปตั้งใน Setting";
-
+      denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS และกดอนุญาต หากใช้ iPhone ให้ไปตั้งใน Settings (การตั้งค่า) > Privacy (ความเป็นส่วนตัว) > Location (บริการหาตำแหน่งที่ตั้ง) > Safari > While Using App (ในระหว่างใช้แอป)";
       denyMsg.style.display = "block";
-
     });
-
-
 
     document.getElementById("checkin-form").addEventListener("submit", async (e) => {
-
       e.preventDefault();
-
       const form = e.target;
 
-
-
       document.getElementById("submit-spinner").style.display = "block";
-
       document.getElementById("submit-msg").innerText = "";
 
-
-
       const formData = new FormData();
-
       formData.append('name', form.name.value);
-
       formData.append('id', form.id.value);
-
       formData.append('lat', userLat);
-
       formData.append('lng', userLng);
 
-
-
       try {
-
         const res = await fetch(scriptURL, {
-
           method: 'POST',
-
           body: formData,
-
         });
-
         document.getElementById("submit-spinner").style.display = "none";
-
         if (res.ok) {
-
           document.getElementById("submit-msg").innerText = "✅ เช็คชื่อสำเร็จ!";
-
           form.reset();
-
         } else {
-
           throw new Error('Network response was not ok');
-
         }
-
       } catch (err) {
-
         console.error(err);
-
         document.getElementById("submit-spinner").style.display = "none";
-
         document.getElementById("submit-msg").innerText = "❌ เกิดข้อผิดพลาดในการส่งข้อมูล";
-
       }
-
     });
-
   </script>
-
 </body>
-
 </html>
