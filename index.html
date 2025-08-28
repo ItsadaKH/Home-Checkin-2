@@ -175,7 +175,7 @@
                 document.getElementById("spinner").style.display = "none";
                 if (retryAttempts < maxRetries) {
                     retryAttempts++;
-                    document.getElementById("status-msg").innerText = `การค้นหาล้มเหลว กำลังลองใหม่อีกครั้ง (${retryAttempts}/${maxRetries})...`;
+                    document.getElementById("status-msg").innerText = `กำลังค้นหาตำแหน่งใหม่อีกครั้ง (${retryAttempts}/${maxRetries})...`;
                     setTimeout(checkLocation, 2000);
                 } else {
                     document.getElementById("status-msg").style.display = "none";
@@ -225,6 +225,7 @@
   </script>
 </body>
 </html>
+
 
 
 
