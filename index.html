@@ -112,7 +112,7 @@
     <div id="form-area">
       <form id="checkin-form">
         <label>ชื่อ-นามสกุล:<br><input type="text" name="name" required></label><br>
-        <label>รหัสนักเรียน(ไม่ต้องมี 0 หรือS ):<br><input type="number" name="id" required></label><br>
+        <label>รหัสนักเรียน(ไม่ต้องมี 0 หรือS ):<br><input type="text" name="id" required></label><br>
         <button type="submit">ส่งข้อมูล</button>
         <div id="submit-spinner" class="spinner"></div>
       </form>
@@ -130,28 +130,13 @@
     document.getElementById("spinner").style.display = "block";
 
     function getDistance(lat1, lon1, lat2, lon2) {
-        const toRad = x => x * Math.PI / 180;
-        const R = 6371e3;
-        const φ1 = toRad(lat1), φ2 = toRad(lat2);
-        const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
-        const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    // ส่วนที่ 1: เพิ่มโค้ดสำหรับการตรวจสอบการเช็คชื่อจากอุปกรณ์เดียวกัน
-    const checkinKey = "lastCheckinTimestamp";
-    const checkinDuration = 12 * 60 * 60 * 1000; // 12 ชั่วโมงในหน่วยมิลลิวินาที
-
-    function hasCheckedInRecently() {
-        const lastCheckin = localStorage.getItem(checkinKey);
-        if (lastCheckin) {
-            const now = Date.now();
-            if (now - lastCheckin < checkinDuration) {
-                return true;
-            }
-        }
-        return false;
+      const toRad = x => x * Math.PI / 180;
+      const R = 6371e3;
+      const φ1 = toRad(lat1), φ2 = toRad(lat2);
+      const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
+      const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
     }
 
     const geolocationOptions = {
@@ -164,17 +149,6 @@
     const maxRetries = 3;
 
     function checkLocation() {
-        // ตรวจสอบว่าเคยเช็คชื่อไปแล้วหรือยัง
-        if (hasCheckedInRecently()) {
-            document.getElementById("spinner").style.display = "none";
-            document.getElementById("status-msg").style.display = 'none';
-            const denyMsg = document.getElementById("deny-msg");
-            denyMsg.style.color = "black";
-            denyMsg.innerText = "คุณได้เช็คชื่อไปแล้วในรอบ 12 ชั่วโมงที่ผ่านมา";
-            denyMsg.style.display = "block";
-            return; // หยุดการทำงาน
-        }
-
         document.getElementById("status-msg").innerText = "กำลังตรวจสอบ โปรดรอสักครู่...";
         document.getElementById("spinner").style.display = "block";
         document.getElementById("deny-msg").style.display = "none";
@@ -183,6 +157,7 @@
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 retryAttempts = 0;
+                // โค้ดส่วนเดิมสำหรับการคำนวณระยะทางและแสดงฟอร์ม
                 document.getElementById("spinner").style.display = "none";
                 userLat = position.coords.latitude;
                 userLng = position.coords.longitude;
@@ -200,7 +175,7 @@
                 document.getElementById("spinner").style.display = "none";
                 if (retryAttempts < maxRetries) {
                     retryAttempts++;
-                    document.getElementById("status-msg").innerText = `กำลังหาตำแหน่งใหม่อีกครั้ง (${retryAttempts}/${maxRetries})...`;
+                    document.getElementById("status-msg").innerText = `การค้นหาล้มเหลว กำลังลองใหม่อีกครั้ง (${retryAttempts}/${maxRetries})...`;
                     setTimeout(checkLocation, 2000);
                 } else {
                     document.getElementById("status-msg").style.display = "none";
@@ -213,55 +188,43 @@
         );
     }
 
+    // เรียกใช้ฟังก์ชัน checkLocation เมื่อหน้าเว็บโหลดเสร็จ
     window.onload = checkLocation;
 
-    // ส่วนที่ 2: แก้ไขโค้ดการส่งข้อมูล
     document.getElementById("checkin-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const form = e.target;
+      e.preventDefault();
+      const form = e.target;
 
-        // ตรวจสอบอีกครั้งก่อนส่ง
-        if (hasCheckedInRecently()) {
-            document.getElementById("submit-msg").innerText = "❌ คุณได้เช็คชื่อไปแล้วจากอุปกรณ์นี้";
-            return;
+      document.getElementById("submit-spinner").style.display = "block";
+      document.getElementById("submit-msg").innerText = "";
+
+      const formData = new FormData();
+      formData.append('name', form.name.value);
+      formData.append('id', form.id.value);
+      formData.append('lat', userLat);
+      formData.append('lng', userLng);
+
+      try {
+        const res = await fetch(scriptURL, {
+          method: 'POST',
+          body: formData,
+        });
+        document.getElementById("submit-spinner").style.display = "none";
+        if (res.ok) {
+          document.getElementById("submit-msg").innerText = "✅ เช็คชื่อสำเร็จ!";
+          form.reset();
+        } else {
+          throw new Error('Network response was not ok');
         }
-
-        document.getElementById("submit-spinner").style.display = "block";
-        document.getElementById("submit-msg").innerText = "";
-
-        const formData = new FormData();
-        formData.append('name', form.name.value);
-        formData.append('id', form.id.value);
-        formData.append('lat', userLat);
-        formData.append('lng', userLng);
-
-        try {
-            const res = await fetch(scriptURL, {
-                method: 'POST',
-                body: formData,
-            });
-            document.getElementById("submit-spinner").style.display = "none";
-            if (res.ok) {
-                document.getElementById("submit-msg").innerText = "✅ เช็คชื่อสำเร็จ!";
-                form.reset();
-                // บันทึกเวลาที่เช็คชื่อสำเร็จลงใน localStorage
-                localStorage.setItem(checkinKey, Date.now());
-            } else {
-                throw new Error('Network response was not ok');
-            }
-        } catch (err) {
-            console.error(err);
-            document.getElementById("submit-spinner").style.display = "none";
-            document.getElementById("submit-msg").innerText = "❌ เกิดข้อผิดพลาดในการส่งข้อมูล";
-        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("submit-spinner").style.display = "none";
+        document.getElementById("submit-msg").innerText = "❌ เกิดข้อผิดพลาดในการส่งข้อมูล";
+      }
     });
-</script>
+  </script>
 </body>
 </html>
-
-
-
-
 
 
 
