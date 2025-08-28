@@ -139,28 +139,57 @@
       return R * c;
     }
 
-    navigator.geolocation.getCurrentPosition((position) => {
-      document.getElementById("spinner").style.display = "none";
-      userLat = position.coords.latitude;
-      userLng = position.coords.longitude;
+    const geolocationOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    };
 
-      document.body.classList.add("background-active");
+    let retryAttempts = 0;
+    const maxRetries = 3;
 
-      const distance = getDistance(userLat, userLng, allowedLat, allowedLng);
-      document.getElementById('status-msg').style.display = 'none';
+    function checkLocation() {
+        document.getElementById("status-msg").innerText = "กำลังตรวจสอบ โปรดรอสักครู่...";
+        document.getElementById("spinner").style.display = "block";
+        document.getElementById("deny-msg").style.display = "none";
+        document.getElementById("form-area").style.display = "none";
 
-      if (distance <= radiusMeters) {
-        document.getElementById("form-area").style.display = "block";
-      } else {
-        document.getElementById("deny-msg").style.display = "block";
-      }
-    }, () => {
-      document.getElementById("spinner").style.display = "none";
-      document.getElementById("status-msg").style.display = "none";
-      const denyMsg = document.getElementById("deny-msg");
-      denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS และกดอนุญาต หากใช้ iPhone ให้ไปตั้งใน Settings (การตั้งค่า) > Privacy (ความเป็นส่วนตัว) > Location (บริการหาตำแหน่งที่ตั้ง) > Safari > While Using App (ในระหว่างใช้แอป)";
-      denyMsg.style.display = "block";
-    });
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                retryAttempts = 0;
+                // โค้ดส่วนเดิมสำหรับการคำนวณระยะทางและแสดงฟอร์ม
+                document.getElementById("spinner").style.display = "none";
+                userLat = position.coords.latitude;
+                userLng = position.coords.longitude;
+                document.body.classList.add("background-active");
+                const distance = getDistance(userLat, userLng, allowedLat, allowedLng);
+                document.getElementById('status-msg').style.display = 'none';
+
+                if (distance <= radiusMeters) {
+                    document.getElementById("form-area").style.display = "block";
+                } else {
+                    document.getElementById("deny-msg").style.display = "block";
+                }
+            },
+            (error) => {
+                document.getElementById("spinner").style.display = "none";
+                if (retryAttempts < maxRetries) {
+                    retryAttempts++;
+                    document.getElementById("status-msg").innerText = `การค้นหาล้มเหลว กำลังลองใหม่อีกครั้ง (${retryAttempts}/${maxRetries})...`;
+                    setTimeout(checkLocation, 2000);
+                } else {
+                    document.getElementById("status-msg").style.display = "none";
+                    const denyMsg = document.getElementById("deny-msg");
+                    denyMsg.innerText = "ไม่สามารถดึงตำแหน่งได้ กรุณาเปิด GPS และกดอนุญาต หากใช้ iPhone ให้ไปตั้งใน Settings (การตั้งค่า) > Privacy (ความเป็นส่วนตัว) > Location (บริการหาตำแหน่งที่ตั้ง) > Safari > While Using App (ในระหว่างใช้แอป)";
+                    denyMsg.style.display = "block";
+                }
+            },
+            geolocationOptions
+        );
+    }
+
+    // เรียกใช้ฟังก์ชัน checkLocation เมื่อหน้าเว็บโหลดเสร็จ
+    window.onload = checkLocation;
 
     document.getElementById("checkin-form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -196,6 +225,7 @@
   </script>
 </body>
 </html>
+
 
 
 
